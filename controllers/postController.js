@@ -1,6 +1,24 @@
 const Post = require('../../models/Post');
 
-// 게시글 조회 (전체)
+// 게시글 단건 조회
+const getPostById = async (req, res) => {
+    try {
+        const { postId } = req.params;
+
+        // TODO: postId를 기반으로 게시글 조회
+        const post = {}; // DB에서 해당 postId로 찾은 게시글
+
+        if (!post) {
+            return res.status(404).json({ message: `Post with id ${postId} not found` });
+        }
+
+        res.json(post);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+
+// 게시글 전체 조회
 const getAllPosts = async (req, res) => {
     try {
         // TODO: DB에서 모든 게시글 조회

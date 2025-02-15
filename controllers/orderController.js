@@ -1,4 +1,3 @@
-// controllers/api/orderController.js
 const Order = require('../../models/Order');
 
 // 거래 조회 (전체)

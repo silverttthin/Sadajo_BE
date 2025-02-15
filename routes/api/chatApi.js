@@ -1,12 +1,14 @@
-const express = require('express')
-const router = express.Router()
-const chatController = require('../../controllers/api/chatController')
+const express = require('express');
+const router = express.Router();
+const chatController = require('../../controllers/api/chatController');
 
-// '/api/chats' endpoint
-router.get('/', chatController.getChats)
-router.get('/:id', chatController.getChat)
-router.post('/', chatController.createChat)
-router.put('/:id', chatController.updateChat)
-router.delete('/:id', chatController.deleteChat)
+// 채팅방 생성
+router.post('/', chatController.createChat);
 
-module.exports = router
+// 유저별 채팅방 조회
+router.get('/user/:userId', chatController.getChatsByUser);
+
+// 채팅방 삭제
+router.delete('/:chatId', chatController.deleteChat);
+
+module.exports = router;
