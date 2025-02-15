@@ -1,12 +1,20 @@
-const express = require('express')
-const router = express.Router()
-const postController = require('../../controllers/api/postController')
+const express = require('express');
+const router = express.Router();
+const postController = require('../../controllers/api/postController');
 
-// '/api/posts' endpoint
-router.get('/', postController.getPosts)
-router.get('/:id', postController.getPost)
-router.post('/', postController.createPost)
-router.put('/:id', postController.updatePost)
-router.delete('/:id', postController.deletePost)
+// 게시글 단건 조회
+router.get('/:postId', postController.getPostById);
 
-module.exports = router
+// 게시글 전체 조회
+router.get('/', postController.getAllPosts);
+
+// 게시글 생성
+router.post('/', postController.createPost);
+
+// 게시글 삭제
+router.delete('/:postId', postController.deletePost);
+
+// 게시글 수정
+router.put('/:postId', postController.updatePost);
+
+module.exports = router;

@@ -1,12 +1,14 @@
-const express = require('express')
-const router = express.Router()
-const messageController = require('../../controllers/api/messageController')
+const express = require('express');
+const router = express.Router();
+const messageController = require('../../controllers/api/messageController');
 
-// '/api/messages' endpoint
-router.get('/', messageController.getMessages)
-router.get('/:id', messageController.getMessage)
-router.post('/', messageController.createMessage)
-router.put('/:id', messageController.updateMessage)
-router.delete('/:id', messageController.deleteMessage)
+// 메시지 생성
+router.post('/', messageController.createMessage);
 
-module.exports = router
+// 채팅방별 메시지 조회
+router.get('/chat/:chatId', messageController.getMessagesByChat);
+
+// 메시지 읽음 표시
+router.put('/:messageId/read', messageController.markMessageAsRead);
+
+module.exports = router;
