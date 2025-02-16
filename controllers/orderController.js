@@ -1,4 +1,4 @@
-const Order = require('../../models/Order');
+const Order = require('../models/Order');
 
 // 거래 조회 (전체)
 const getAllOrders = async (req, res) => {

@@ -1,5 +1,15 @@
 const express = require('express')
 const app = express()
+const { MongoClient } = require('mongodb')
+
+let db
+const url = 'mongodb+srv://kyleidea:asdfjkl64@kyle.pfmyc.mongodb.net/?retryWrites=true&w=majority&appName=Kyle'
+new MongoClient(url).connect().then((client)=>{
+  console.log('DB연결성공')
+  db = client.db('Sadajo')
+}).catch((err)=>{
+  console.log(err)
+})
 
 // JSON 파싱을 위한 미들웨어
 app.use(express.json())

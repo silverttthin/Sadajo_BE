@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const chatController = require('../../controllers/api/chatController');
+const chatController = require('../../controllers/chatController');
 
 // 채팅방 생성
 router.post('/', chatController.createChat);

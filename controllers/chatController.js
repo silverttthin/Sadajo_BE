@@ -1,4 +1,4 @@
-const Chat = require('../../models/Chat');
+const Chat = require('../models/Chat');
 
 // 채팅방 생성
 const createChat = async (req, res) => {

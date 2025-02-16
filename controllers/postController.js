@@ -1,4 +1,4 @@
-const Post = require('../../models/Post');
+const Post = require('../models/Post');
 
 // 게시글 단건 조회
 const getPostById = async (req, res) => {
@@ -68,6 +68,7 @@ const updatePost = async (req, res) => {
 };
 
 module.exports = {
+    getPostById,
     getAllPosts,
     createPost,
     deletePost,

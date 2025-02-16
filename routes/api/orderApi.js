@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const orderController = require('../../controllers/api/orderController');
+const orderController = require('../../controllers/orderController');
 
 // 거래 조회
 router.get('/', orderController.getAllOrders);

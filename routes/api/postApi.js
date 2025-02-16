@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const postController = require('../../controllers/api/postController');
+const postController = require('../../controllers/postController');
 
 // 게시글 단건 조회
 router.get('/:postId', postController.getPostById);

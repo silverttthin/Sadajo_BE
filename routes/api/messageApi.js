@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const messageController = require('../../controllers/api/messageController');
+const messageController = require('../../controllers/messageController');
 
 // 메시지 생성
 router.post('/', messageController.createMessage);
