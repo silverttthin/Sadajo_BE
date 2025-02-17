@@ -1,25 +1,33 @@
+const { ObjectId } = require('mongodb');
+const { getDb } = require('../db'); // DB 연결 객체 가져오기
 const Chat = require('../models/Chat');
 
-// 채팅방 생성
 const createChat = async (req, res) => {
     try {
+        const db = getDb();
         const { requesterId, accepterId } = req.body;
-        const newChat = new Chat(null, requesterId, accepterId, new Date(), new Date());
+        const newChat = {
+            requesterId,
+            accepterId,
+            createdAt: new Date(),
+            updatedAt: new Date()
+        };
 
-        // TODO: DB에 newChat 저장
-        res.status(201).json(newChat);
+        const result = await db.collection('chat').insertOne(newChat);
+        res.status(201).json({ _id: result.insertedId, ...newChat });
     } catch (err) {
         res.status(400).json({ message: err.message });
     }
 };
 
-// 유저별 채팅방 조회
 const getChatsByUser = async (req, res) => {
     try {
+        const db = getDb();
         const { userId } = req.params;
-
-        // TODO: userId를 기반으로 해당 유저와 관련된 채팅방들 조회
-        const chats = []; // DB에서 해당 userId로 조회한 채팅방들
+        
+        const chats = await db.collection('chat').find({
+            $or: [{ requesterId: userId }, { accepterId: userId }]
+        }).toArray();
 
         if (chats.length === 0) {
             return res.status(404).json({ message: `No chats found for user ${userId}` });
@@ -31,12 +39,17 @@ const getChatsByUser = async (req, res) => {
     }
 };
 
-// 채팅방 삭제
 const deleteChat = async (req, res) => {
     try {
+        const db = getDb();
         const { chatId } = req.params;
 
-        // TODO: chatId를 기반으로 채팅방 삭제
+        const result = await db.collection('chat').deleteOne({ _id: new ObjectId(chatId) });
+
+        if (result.deletedCount === 0) {
+            return res.status(404).json({ message: `Chat ${chatId} not found` });
+        }
+
         res.json({ message: `Chat ${chatId} deleted` });
     } catch (err) {
         res.status(500).json({ message: err.message });

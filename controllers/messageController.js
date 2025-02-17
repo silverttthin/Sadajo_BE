@@ -1,25 +1,38 @@
+const { ObjectId } = require('mongodb');
+const { getDb } = require('../db'); // DB 연결
 const Message = require('../models/Message');
 
-// 메시지 생성
+// 📌 메시지 생성
 const createMessage = async (req, res) => {
     try {
         const { chatId, senderId, content } = req.body;
-        const newMessage = new Message(null, chatId, senderId, content, new Date());
+        const db = getDb();
+        const newMessage = {
+            chatId: new ObjectId(chatId),
+            senderId: senderId,
+            content: content,
+            createdAt: new Date()
+        };
 
-        // TODO: DB에 newMessage 저장
+        const result = await db.collection('message').insertOne(newMessage);
+        newMessage._id = result.insertedId;
+
         res.status(201).json(newMessage);
     } catch (err) {
         res.status(400).json({ message: err.message });
     }
 };
 
-// 채팅방별 메시지 조회
+// 📌 채팅방별 메시지 조회
 const getMessagesByChat = async (req, res) => {
     try {
         const { chatId } = req.params;
+        const db = getDb();
 
-        // TODO: chatId를 기반으로 해당 채팅방의 모든 메시지 조회
-        const messages = []; // DB에서 해당 chatId로 조회한 메시지들
+        const messages = await db.collection('message')
+            .find({ chatId: new ObjectId(chatId) })
+            .sort({ createdAt: 1 })
+            .toArray();
 
         if (messages.length === 0) {
             return res.status(404).json({ message: `No messages found for chat ${chatId}` });
@@ -31,12 +44,21 @@ const getMessagesByChat = async (req, res) => {
     }
 };
 
-// 메시지 읽음 표시
+// 📌 메시지 읽음 표시 (예: 읽음 필드를 추가)
 const markMessageAsRead = async (req, res) => {
     try {
         const { messageId } = req.params;
+        const db = getDb();
 
-        // TODO: messageId를 기반으로 메시지의 읽음 표시 업데이트
+        const result = await db.collection('message').updateOne(
+            { _id: new ObjectId(messageId) },
+            { $set: { read: true } }
+        );
+
+        if (result.matchedCount === 0) {
+            return res.status(404).json({ message: `Message ${messageId} not found` });
+        }
+
         res.json({ message: `Message ${messageId} marked as read` });
     } catch (err) {
         res.status(500).json({ message: err.message });

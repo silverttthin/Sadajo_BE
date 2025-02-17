@@ -1,10 +1,12 @@
+const { ObjectId } = require('mongodb');
+const { getDb } = require('../db'); // DB 연결 객체 가져오기
 const Order = require('../models/Order');
 
 // 거래 조회 (전체)
 const getAllOrders = async (req, res) => {
     try {
-        // TODO: DB에서 모든 거래 조회
-        const orders = []; // DB에서 들고온 거래들
+        const db = getDb();
+        const orders = await db.collection('orders').find({}).toArray();
         res.json(orders);
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -15,10 +17,20 @@ const getAllOrders = async (req, res) => {
 const createOrder = async (req, res) => {
     try {
         const { requesterId, accepterId, orderState, items, fee } = req.body;
+        const db = getDb();
+        
         const newOrder = new Order(null, requesterId, accepterId, orderState, new Date(), items, fee);
-
-        // TODO: DB에 newOrder 저장
-        res.status(201).json(newOrder);
+        
+        const result = await db.collection('orders').insertOne({
+            requesterId: newOrder.requesterId,
+            accepterId: newOrder.accepterId,
+            orderState: newOrder.orderState,
+            createdAt: newOrder.createdAt,
+            items: newOrder.items,
+            fee: newOrder.fee
+        });
+        
+        res.status(201).json({ message: 'Order created', order: { ...newOrder, _id: result.insertedId } });
     } catch (err) {
         res.status(400).json({ message: err.message });
     }
@@ -28,8 +40,14 @@ const createOrder = async (req, res) => {
 const deleteOrder = async (req, res) => {
     try {
         const { orderId } = req.params;
+        const db = getDb();
 
-        // TODO: orderId를 기반으로 거래 삭제
+        const result = await db.collection('orders').deleteOne({ _id: new ObjectId(orderId) });
+        
+        if (result.deletedCount === 0) {
+            return res.status(404).json({ message: `Order with id ${orderId} not found` });
+        }
+        
         res.json({ message: `Order ${orderId} deleted` });
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -41,8 +59,17 @@ const updateOrderStatus = async (req, res) => {
     try {
         const { orderId } = req.params;
         const { orderState } = req.body;
+        const db = getDb();
 
-        // TODO: orderId를 찾아서 orderState 업데이트
+        const result = await db.collection('orders').updateOne(
+            { _id: new ObjectId(orderId) },
+            { $set: { orderState } }
+        );
+        
+        if (result.matchedCount === 0) {
+            return res.status(404).json({ message: `Order with id ${orderId} not found` });
+        }
+        
         res.json({ message: `Order ${orderId} updated to state ${orderState}` });
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -54,8 +81,17 @@ const updateOrder = async (req, res) => {
     try {
         const { orderId } = req.params;
         const updateData = req.body;
+        const db = getDb();
 
-        // TODO: orderId를 찾아서 updateData 반영
+        const result = await db.collection('orders').updateOne(
+            { _id: new ObjectId(orderId) },
+            { $set: updateData }
+        );
+        
+        if (result.matchedCount === 0) {
+            return res.status(404).json({ message: `Order with id ${orderId} not found` });
+        }
+        
         res.json({ message: `Order ${orderId} updated`, data: updateData });
     } catch (err) {
         res.status(500).json({ message: err.message });
