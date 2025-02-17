@@ -19,16 +19,9 @@ const createOrder = async (req, res) => {
         const { requesterId, accepterId, orderState, items, fee } = req.body;
         const db = getDb();
         
-        const newOrder = new Order(null, requesterId, accepterId, orderState, new Date(), items, fee);
+        const newOrder = new Order(requesterId, accepterId, orderState, items, fee);
         
-        const result = await db.collection('orders').insertOne({
-            requesterId: newOrder.requesterId,
-            accepterId: newOrder.accepterId,
-            orderState: newOrder.orderState,
-            createdAt: newOrder.createdAt,
-            items: newOrder.items,
-            fee: newOrder.fee
-        });
+        const result = await db.collection('orders').insertOne(newOrder);
         
         res.status(201).json({ message: 'Order created', order: { ...newOrder, _id: result.insertedId } });
     } catch (err) {
