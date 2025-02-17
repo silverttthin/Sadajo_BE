@@ -17,4 +17,7 @@ router.delete('/:postId', postController.deletePost);
 // 게시글 수정
 router.put('/:postId', postController.updatePost);
 
+// 댓글 작성
+router.post('/:postId/comments', postController.addComment);
+
 module.exports = router;
