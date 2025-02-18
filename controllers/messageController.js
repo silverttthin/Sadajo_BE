@@ -6,18 +6,41 @@ const Message = require('../models/Message');
 const createMessage = async (req, res) => {
     try {
         const { chatId, senderId, content } = req.body;
+
+        if (!chatId || !senderId || !content) {
+            return res.status(400).json({ message: `ChatId, senderId, and content are required.` });
+        }
+
         const db = getDb();
+
+        const chat = await db.collection('chats').findOne({ _id: new ObjectId(chatId) });
+        if (!chat) {
+            return res.status(404).json({ message: `The chat with ID ${chatId} could not be found.` });
+        }
+
+        if (chat.requesterId !== senderId && chat.accepterId !== senderId) {
+            return res.status(403).json({ message: `Sender is not a participant in this chat.` });
+        }
+
         const newMessage = {
             chatId: new ObjectId(chatId),
             senderId: senderId,
             content: content,
-            createdAt: new Date()
+            createdAt: new Date(),
+            read: false
         };
 
-        const result = await db.collection('message').insertOne(newMessage);
-        newMessage._id = result.insertedId;
+        const result = await db.collection('messages').insertOne(newMessage);
 
-        res.status(201).json(newMessage);
+        await db.collection('chats').updateOne(
+            { _id: new ObjectId(chatId) },
+            { $set: { updatedAt: new Date() } }
+        );
+
+        res.status(201).json({
+            _id: result.insertedId,
+            ...newMessage
+        });
     } catch (err) {
         res.status(400).json({ message: err.message });
     }
@@ -29,14 +52,16 @@ const getMessagesByChat = async (req, res) => {
         const { chatId } = req.params;
         const db = getDb();
 
-        const messages = await db.collection('message')
+
+        const chat = await db.collection('chats').findOne({ _id: new ObjectId(chatId) });
+        if (!chat) {
+            return res.status(404).json({ message: `The chat with ID ${chatId} could not be found.` });
+        }
+
+        const messages = await db.collection('messages')
             .find({ chatId: new ObjectId(chatId) })
             .sort({ createdAt: 1 })
             .toArray();
-
-        if (messages.length === 0) {
-            return res.status(404).json({ message: `No messages found for chat ${chatId}` });
-        }
 
         res.json(messages);
     } catch (err) {
@@ -44,19 +69,20 @@ const getMessagesByChat = async (req, res) => {
     }
 };
 
-// 📌 메시지 읽음 표시 (예: 읽음 필드를 추가)
+// 📌 메시지 읽음 표시
+// TODO: 현재 시간 이전의 모든 메시지를 읽음(read)으로 표시할지 여부 논의
 const markMessageAsRead = async (req, res) => {
     try {
         const { messageId } = req.params;
         const db = getDb();
 
-        const result = await db.collection('message').updateOne(
+        const result = await db.collection('messages').updateOne(
             { _id: new ObjectId(messageId) },
             { $set: { read: true } }
         );
 
         if (result.matchedCount === 0) {
-            return res.status(404).json({ message: `Message ${messageId} not found` });
+            return res.status(404).json({ message: `The message with ID ${messageId} could not be found` });
         }
 
         res.json({ message: `Message ${messageId} marked as read` });
