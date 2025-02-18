@@ -50,7 +50,9 @@ const getChatsByUser = async (req, res) => {
 
         const chats = await db.collection('chats').find({
             $or: [{ requesterId: userId }, { accepterId: userId }]
-        }).toArray();
+        })
+            .sort({ updatedAt: -1 })
+            .toArray();
 
         res.json(chats);
     } catch (err) {
