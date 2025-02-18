@@ -1,11 +1,33 @@
 const { ObjectId } = require('mongodb');
-const { getDb } = require('../db'); // DB 연결 객체 가져오기
+const { getDb } = require('../db'); // DB 연결
 const Chat = require('../models/Chat');
 
+// 📌 채팅방 생성
 const createChat = async (req, res) => {
     try {
-        const db = getDb();
         const { requesterId, accepterId } = req.body;
+
+        if (!requesterId || !accepterId) {
+            return res.status(400).json({ message: `Both requesterId and accepterId are required.` });
+        }
+
+        if (requesterId == accepterId) {
+            return res.status(400).json({ message: `RequesterId and AccepterId must be different.` });
+        }
+
+        const db = getDb();
+
+        const existingChat = await db.collection('chats').findOne({
+            $or: [
+                { requesterId: requesterId, accepterId: accepterId },
+                { requesterId: accepterId, accepterId: requesterId }
+            ]
+        });
+
+        if (existingChat) {
+            return res.status(400).json({ message: `Chat already exists between ${requesterId} and ${accepterId}.` });
+        }
+
         const newChat = {
             requesterId,
             accepterId,
@@ -13,25 +35,22 @@ const createChat = async (req, res) => {
             updatedAt: new Date()
         };
 
-        const result = await db.collection('chat').insertOne(newChat);
+        const result = await db.collection('chats').insertOne(newChat);
         res.status(201).json({ _id: result.insertedId, ...newChat });
     } catch (err) {
         res.status(400).json({ message: err.message });
     }
 };
 
+// 📌 특정 사용자의 채팅방 조회
 const getChatsByUser = async (req, res) => {
     try {
-        const db = getDb();
         const { userId } = req.params;
-        
-        const chats = await db.collection('chat').find({
+        const db = getDb();
+
+        const chats = await db.collection('chats').find({
             $or: [{ requesterId: userId }, { accepterId: userId }]
         }).toArray();
-
-        if (chats.length === 0) {
-            return res.status(404).json({ message: `No chats found for user ${userId}` });
-        }
 
         res.json(chats);
     } catch (err) {
@@ -39,18 +58,19 @@ const getChatsByUser = async (req, res) => {
     }
 };
 
+// 📌 채팅방 삭제
 const deleteChat = async (req, res) => {
     try {
-        const db = getDb();
         const { chatId } = req.params;
+        const db = getDb();
 
-        const result = await db.collection('chat').deleteOne({ _id: new ObjectId(chatId) });
+        const result = await db.collection('chats').deleteOne({ _id: new ObjectId(chatId) });
 
         if (result.deletedCount === 0) {
-            return res.status(404).json({ message: `Chat ${chatId} not found` });
+            return res.status(404).json({ message: `The chat with ID ${chatId} could not be found.` });
         }
 
-        res.json({ message: `Chat ${chatId} deleted` });
+        res.json({ message: `Chat with ID ${chatId} has been successfully deleted.` });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
