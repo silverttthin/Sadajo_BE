@@ -1,96 +1,141 @@
+const { ObjectId } = require('mongodb');
+const { getDb } = require('../db');
 const User = require('../models/User');
+const bcrypt = require('bcrypt');
+const passport = require('passport');
+const LocalStrategy = require('passport-local')
 
-// TODO: DB에서 사용자 조회
-let users = [];
 
-const userController = {
-    login: async (req, res) => {
-        try {
-            const { email, password } = req.body
+const findUserByEmail = async (email) => {
+    const db = getDb();
+    return await db.collection('users').findOne({ userEmail: email });
+};
 
-            if (!email || !password) {
-                return res.status(400).json({ message: '모든 필드를 입력해주세요.' })
-            }
 
-            const user = users.find(user => user.email === email)
-            if (!user) {
-                return res.status(400).json({ message: '가입되지 않은 계정입니다.' })
-            }
+// 📌 로그인
+const login = async (req, res, next) => {
+    try {
+        const { userEmail, password } = req.body;
 
-            if (user.password !== password) {
-                return res.status(400).json({ message: '비밀번호가 일치하지 않습니다.' })
-            }
-
-            // TODO: 로그인 성공 시 JWT 토큰 발급
-            res.status(200).json({ message: '로그인 성공' })
-        } catch (err) {
-            res.status(500).json({ message: err.message })
+        if (!userEmail || !password) {
+            return res.status(400).json({ message: 'userEmail and password are required.' });
         }
-    },
 
-    logout: async (req, res) => {
-        try {
-            // TODO: 토큰 삭제
-            res.json({ message: '로그아웃 성공' })
-        } catch (err) {
-            res.status(500).json({ message: err.message })
-        }
-    },
+        passport.authenticate('local', (err, user, info) => {
+            if (err) return res.status(500).json({ message: err.message });
+            if (!user) return res.status(401).json({ message: info.message });
+            req.logIn(user, (err) => {
+                if (err) return next(err);
+                return res.json({
+                    message: 'User logged in successfully',
+                    user: { id: user._id, email: user.userEmail, name: user.userName }
+                });
+            });
+        })(req, res, next);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
 
-    register: async (req, res) => {
-        try {
-            const { userName, userEmail, password } = req.body;
-            if (!userName || !userEmail || !password) {
-                return res.status(400).json({ message: '모든 필드를 입력해주세요.' });
+// 📌 로그아웃
+const logout = (req, res) => {
+    try {
+        req.logout((err) => {
+            if (err) {
+                return res.status(500).json({ message: err.message });
             }
+            res.json({ message: 'User logged out successfully' });
+        });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
 
-            const existingUser = users.find(user => user.userEmail === userEmail);
-            if (existingUser) {
-                return res.status(400).json({ message: '이미 등록된 이메일입니다.' });
-            }
 
-            const newUser = new User(
-                users.length + 1,
-                userName,
-                userEmail,
-                password,
-                new Date()
-            );
-
-            // TODO: DB에 저장
-            users.push(newUser);
-            res.json({ message: '사용자 생성 성공' });
-        } catch (err) {
-            res.status(500).json({ message: err.message });
+// 📌 회원가입
+const register = async (req, res) => {
+    try {
+        const { userName, userEmail, password } = req.body;
+        if (!userName || !userEmail || !password) {
+            return res.status(400).json({ message: 'userName, userEmail, password are required.' });
         }
-    },
 
-    delete: async (req, res) => {
-        try {
-            const userId = req.params.id;
-            const userIndex = users.findIndex(user => user.userId == userId);
-
-            if (userIndex === -1) {
-                return res.status(400).json({ message: '사용자를 찾을 수 없습니다.' });
-            }
-
-            // TODO: DB에서 삭제
-            users.splice(userIndex, 1);
-            res.json({ message: '사용자 삭제 성공' });
-        } catch (err) {
-            res.status(500).json({ message: err.message });
+        if (await findUserByEmail(userEmail)) {
+            return res.status(400).json({ message: 'Email is already registered.' });
         }
-    },
 
-    // getUser: async (req, res) => {
-    //     try {
-    //         const userId = req.params.id
-    //         // 사용자 정보 조회 로직
-    //         res.json({ user: { id: userId } })
-    //     } catch (err) {
-    //         res.status(500).json({ message: err.message })
-    //     }
-    // }
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        const newUser = new User(
+            userEmail,
+            userName,
+            hashedPassword,
+            new Date()
+        );
+
+        const db = getDb();
+        const result = await db.collection('users').insertOne(newUser);
+
+        res.json({ message: 'User registered successfully' });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+
+// 📌 회원탈퇴
+const deleteUser = async (req, res) => {
+    try {
+        const userId = req.params.id;
+
+        const db = getDb();
+        const user = await db.collection('users').findOne({ _id: new ObjectId(userId) });
+
+        if (!user) {
+            return res.status(400).json({ message: 'User not found' });
+        }
+
+        await db.collection('users').deleteOne({ _id: new ObjectId(userId) });
+
+        req.logout((err) => {
+            if (err) {
+                return res.status(500).json({ message: err.message });
+            }
+            res.json({ message: 'User deleted and logged out successfully' });
+        });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+
+passport.use(new LocalStrategy({ usernameField: 'userEmail', passwordField: 'password' }, async (userEmail, password, cb) => {
+    const db = getDb();
+    let result = await findUserByEmail(userEmail);
+    if (!result) {
+        return cb(null, false, { message: 'Incorrect email.' });
+    }
+    const isMatch = await bcrypt.compare(password, result.password);
+    if (isMatch) {
+        return cb(null, result);
+    } else {
+        return cb(null, false, { message: 'Incorrect password.' });
+    }
 }
+))
 
-module.exports = userController
+passport.serializeUser((user, done) => {
+    process.nextTick(() => {
+        done(null, { id: user._id, email: user.userEmail, name: user.userName });
+    });
+})
+
+passport.deserializeUser(async (user, done) => {
+    const db = getDb();
+    let result = await db.collection('users').findOne({ _id: new ObjectId(user.id) });
+    delete result.password;
+    process.nextTick(() => {
+        done(null, user);
+    });
+})
+
+
+module.exports = { login, logout, register, deleteUser };
