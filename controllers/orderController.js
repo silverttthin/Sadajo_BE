@@ -14,6 +14,7 @@ const getAllOrders = async (req, res) => {
 const createOrder = async (req, res) => {
     try {
         const { requesterId, accepterId, orderState, items, fee } = req.body;
+        // todo: validation (실제 존재하는 유저들의 아이디인가)
         const result = await orderService.createOrder({ requesterId, accepterId, orderState, items, fee });
         res.status(201).json(result);
     } catch (err) {
