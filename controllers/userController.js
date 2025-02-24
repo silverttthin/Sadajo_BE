@@ -4,19 +4,14 @@ const User = require('../models/User');
 const bcrypt = require('bcrypt');
 const passport = require('passport');
 const LocalStrategy = require('passport-local')
-
-
-const findUserByEmail = async (email) => {
-    const db = getDb();
-    return await db.collection('users').findOne({ userEmail: email });
-};
-
+const { findUserByEmail, registerUser, deleteUser: deleteUserService } = require('../services/userService');
 
 // 📌 로그인
 const login = async (req, res, next) => {
     try {
         const { userEmail, password } = req.body;
 
+        // 1. 데이터 검증
         if (!userEmail || !password) {
             return res.status(400).json({ message: 'userEmail and password are required.' });
         }
@@ -24,6 +19,7 @@ const login = async (req, res, next) => {
         passport.authenticate('local', (err, user, info) => {
             if (err) return res.status(500).json({ message: err.message });
             if (!user) return res.status(401).json({ message: info.message });
+            
             req.logIn(user, (err) => {
                 if (err) return next(err);
                 return res.json({
@@ -31,8 +27,12 @@ const login = async (req, res, next) => {
                     user: { id: user._id, email: user.userEmail, name: user.userName }
                 });
             });
+
+
         })(req, res, next);
+
     } catch (err) {
+        console.log("로그인 처리 과정에서 오류");
         res.status(500).json({ message: err.message });
     }
 };
@@ -52,7 +52,7 @@ const logout = (req, res) => {
 };
 
 
-// 📌 회원가입
+// 📌 회원가입 
 const register = async (req, res) => {
     try {
         const { userName, userEmail, password } = req.body;
@@ -60,41 +60,18 @@ const register = async (req, res) => {
             return res.status(400).json({ message: 'userName, userEmail, password are required.' });
         }
 
-        if (await findUserByEmail(userEmail)) {
-            return res.status(400).json({ message: 'Email is already registered.' });
-        }
-
-        const hashedPassword = await bcrypt.hash(password, 10);
-
-        const newUser = new User(
-            userEmail,
-            userName,
-            hashedPassword,
-            new Date()
-        );
-
-        const db = getDb();
-        const result = await db.collection('users').insertOne(newUser);
-
+        await registerUser({ userName, userEmail, password });
         res.json({ message: 'User registered successfully' });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
 };
 
-// 📌 회원탈퇴
+// 📌 회원탈퇴 (userService의 deleteUser 사용)
 const deleteUser = async (req, res) => {
     try {
         const userId = req.params.id;
-
-        const db = getDb();
-        const user = await db.collection('users').findOne({ _id: new ObjectId(userId) });
-
-        if (!user) {
-            return res.status(400).json({ message: 'User not found' });
-        }
-
-        await db.collection('users').deleteOne({ _id: new ObjectId(userId) });
+        await deleteUserService(userId);
 
         req.logout((err) => {
             if (err) {
