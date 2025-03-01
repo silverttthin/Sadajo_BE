@@ -2,7 +2,7 @@ const { ObjectId } = require('mongodb');
 const { getDb } = require('../db');
 const User = require('../models/User');
 const bcrypt = require('bcrypt');
-const passport = require('passport');
+const passport = require('../passport');
 const LocalStrategy = require('passport-local')
 const { findUserByEmail, registerUser, deleteUser: deleteUserService } = require('../services/userService');
 
@@ -83,36 +83,6 @@ const deleteUser = async (req, res) => {
         res.status(500).json({ message: err.message });
     }
 };
-
-passport.use(new LocalStrategy({ usernameField: 'userEmail', passwordField: 'password' }, async (userEmail, password, cb) => {
-    const db = getDb();
-    let result = await findUserByEmail(userEmail);
-    if (!result) {
-        return cb(null, false, { message: 'Incorrect email.' });
-    }
-    const isMatch = await bcrypt.compare(password, result.password);
-    if (isMatch) {
-        return cb(null, result);
-    } else {
-        return cb(null, false, { message: 'Incorrect password.' });
-    }
-}
-))
-
-passport.serializeUser((user, done) => {
-    process.nextTick(() => {
-        done(null, { id: user._id, email: user.userEmail, name: user.userName });
-    });
-})
-
-passport.deserializeUser(async (user, done) => {
-    const db = getDb();
-    let result = await db.collection('users').findOne({ _id: new ObjectId(user.id) });
-    delete result.password;
-    process.nextTick(() => {
-        done(null, user);
-    });
-})
 
 
 module.exports = { login, logout, register, deleteUser };
