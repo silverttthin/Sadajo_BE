@@ -11,24 +11,24 @@ module.exports = (server) => {
     io.on('connection', (socket) => {
         console.log('새 클라이언트 접속:', socket.id);
 
-        // 채팅방 생성 이벤트
-        socket.on('createChat', async ({ requesterId, accepterId }) => {
-            try {
-                // 1. 채팅방 생성
-                const chat = await chatService.createChat({ requesterId, accepterId });
-                // 2. 채팅방의 ID를 room 이름으로 사용하여 생성된 방에 join
-                socket.join(chat._id.toString());
-                // 3. 프론트에 채팅방 완성됐다고 emit
-                socket.emit('chatCreated', chat);
-            } catch (err) {
-                socket.emit('error', { message: err.message });
-            }
-        });
+        // // 채팅방 생성 이벤트
+        // socket.on('createChat', async ({ requesterId, accepterId }) => {
+        //     try {
+        //         // 1. 채팅방 생성
+        //         const chat = await chatService.createChat({ requesterId, accepterId });
+        //         // 2. 채팅방의 ID를 room 이름으로 사용하여 생성된 방에 join
+        //         socket.join(chat._id.toString());
+        //         // 3. 프론트에 채팅방 완성됐다고 emit
+        //         socket.emit('chatCreated', chat);
+        //     } catch (err) {
+        //         socket.emit('error', { message: err.message });
+        //     }
+        // });
 
         // 채팅방 입장 이벤트
-        socket.on('joinChat', ({ chatId }) => {
+        socket.on('joinRoom', ({ chatId, userId }) => {
             socket.join(chatId);
-            socket.emit('joinedChat', { chatId });
+            socket.emit('joinedChat', { chatId }); // 프론트에 참여 성공했다고 알리는 소켓통신
         });
 
         // 메시지 송신 이벤트
