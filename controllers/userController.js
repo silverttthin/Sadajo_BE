@@ -5,6 +5,7 @@ const bcrypt = require('bcrypt');
 const passport = require('../passport');
 const LocalStrategy = require('passport-local')
 const { findUserByEmail, registerUser, deleteUser: deleteUserService } = require('../services/userService');
+const BaseResponse = require("../utils/BaseResponse");
 
 // 📌 로그인
 const login = async (req, res, next) => {
@@ -22,10 +23,28 @@ const login = async (req, res, next) => {
             
             req.logIn(user, (err) => {
                 if (err) return next(err);
-                return res.json({
-                    message: 'User logged in successfully',
-                    user: { id: user._id, email: user.userEmail, name: user.userName }
-                });
+
+                // BaseResponse 클래스는 상태, 코드, 메시지, 데이터를 인자로 받습니다.
+                // return res.json(
+                //     new BaseResponse("Success", 200, 'User logged in successfully', 
+                    //     { 
+                    //         id: user._id, 
+                    //         email: user.userEmail, 
+                    //         name: user.userName 
+                    //     }
+                    // )
+                // );
+
+                return res.json(
+                    new BaseResponse(status="success", code = 200, message = "로그인이 성공했습니다", 
+                        data = { 
+                            id: user._id, 
+                            email: user.userEmail, 
+                            name: user.userName 
+                        }
+                    )
+                )
+
             });
 
 
